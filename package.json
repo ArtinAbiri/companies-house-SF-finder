@@ -1,0 +1,22 @@
+{
+    "name": "companies-house-salesforce",
+    "version": "1.0.0",
+    "description": "Salesforce Lightning Web Component for UK Companies House API integration",
+    "main": "index.js",
+    "scripts": {
+        "deploy": "./deploy.sh",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [
+        "salesforce",
+        "lightning",
+        "companies-house",
+        "api",
+        "integration"
+    ],
+    "author": "Artin Abiri",
+    "license": "MIT",
+    "devDependencies": {
+        "@salesforce/cli": "^2.0.0"
+    }
+} 
