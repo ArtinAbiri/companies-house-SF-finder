@@ -1,0 +1,99 @@
+<template>
+    <lightning-card class="company-card" onclick={handleCardClick}>
+        <div class="card-content">
+            <!-- Company Header -->
+            <div class="card-header">
+                <div class="company-avatar">
+                    <lightning-icon icon-name="standard:account" size="x-small"></lightning-icon>
+                </div>
+                <div class="company-info">
+                    <div class="company-name" title={company.company_name}>{company.company_name}</div>
+                    <div class="company-number" title={company.company_number}>#{company.company_number}</div>
+                </div>
+                <div class="status-badge {statusBadgeClass}" title={company.company_status}>
+                    {company.company_status}
+                </div>
+            </div>
+            
+            <!-- Company Details -->
+            <div class="card-body">
+                <!-- Incorporation Date -->
+                <div class="detail-row">
+                    <span class="detail-label">Incorporated:</span>
+                    <span class="detail-value" title={formattedIncorporationDate}>{formattedIncorporationDate}</span>
+                </div>
+                
+                <!-- Company Type -->
+                <div class="detail-row">
+                    <span class="detail-label">Type:</span>
+                    <span class="detail-value" title={company.company_type}>{company.company_type}</span>
+                </div>
+                
+                <!-- First Officer -->
+                <div class="detail-row" if:true={hasOfficer}>
+                    <span class="detail-label">First Officer:</span>
+                    <span class="detail-value officer-info" title={officerDisplayName}>{officerDisplayName}</span>
+                </div>
+                
+                <!-- Officer Role -->
+                <div class="detail-row" if:true={hasOfficerRole}>
+                    <span class="detail-label">Role:</span>
+                    <span class="detail-value" title={company.first_officer.role}>{company.first_officer.role}</span>
+                </div>
+                
+                <!-- Address -->
+                <div class="detail-row" if:true={formattedAddress}>
+                    <span class="detail-label">Address:</span>
+                    <span class="detail-value address-text" title={formattedAddress}>{formattedAddress}</span>
+                </div>
+            </div>
+            
+            <!-- Success Message -->
+            <template if:true={showSuccess}>
+                <div class="success-section">
+                    <div class="success-icon">
+                        <lightning-icon icon-name="utility:success" size="x-small"></lightning-icon>
+                    </div>
+                    <div class="success-content">
+                        <div class="success-title" title={successMessage}>{successMessage}</div>
+                        <lightning-button 
+                            label="View Record" 
+                            variant="brand" 
+                            size="small"
+                            onclick={handleViewRecord}
+                            class="view-record-btn">
+                        </lightning-button>
+                    </div>
+                </div>
+            </template>
+            
+            <!-- Action Buttons -->
+            <template if:false={showSuccess}>
+                <div class="card-footer">
+                    <lightning-button
+                        label="Create Lead"
+                        variant="brand"
+                        onclick={handleCreateLead}
+                        disabled={buttonsDisabled}
+                        class="action-btn lead-btn">
+                    </lightning-button>
+                    <lightning-button
+                        label="Create Account"
+                        variant="neutral"
+                        onclick={handleCreateAccount}
+                        disabled={buttonsDisabled}
+                        class="action-btn account-btn">
+                    </lightning-button>
+                </div>
+            </template>
+            
+            <!-- Processing Spinner -->
+            <template if:true={isProcessing}>
+                <div class="processing-overlay">
+                    <lightning-spinner alternative-text="Creating record..." size="small"></lightning-spinner>
+                    <div class="processing-text">Creating {recordType}...</div>
+                </div>
+            </template>
+        </div>
+    </lightning-card>
+</template> 

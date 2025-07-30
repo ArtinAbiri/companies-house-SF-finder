@@ -1,0 +1,97 @@
+# Salesforce specific
+.sf/
+.sfdx/
+.sfdxignore
+.sfdxproject
+.sfdxproject.json
+.sfdxproject.xml
+.sfdxproject.json.bak
+.sfdxproject.xml.bak
+.sfdxproject.json.tmp
+.sfdxproject.xml.tmp
+.sfdxproject.json.old
+.sfdxproject.xml.old
+.sfdxproject.json.new
+.sfdxproject.xml.new
+.sfdxproject.json.backup
+.sfdxproject.xml.backup
+.sfdxproject.json.save
+.sfdxproject.xml.save
+.sfdxproject.json.swp
+.sfdxproject.xml.swp
+.sfdxproject.json.swo
+.sfdxproject.xml.swo
+.sfdxproject.json~
+.sfdxproject.xml~
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# nyc test coverage
+.nyc_output
+
+# Dependency directories
+node_modules/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env
+
+# API Keys and sensitive data
+*.key
+*.pem
+*.p12
+*.pfx
+api-keys.txt
+secrets.txt
+config.json
+
+# Build outputs
+dist/
+build/
+out/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp 

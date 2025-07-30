@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <!-- Apex Classes -->
+    <types>
+        <members>CompaniesHouseController</members>
+        <members>SICCodeHelper</members>
+        <name>ApexClass</name>
+    </types>
+    
+    <!-- Lightning Web Components -->
+    <types>
+        <members>recentCompaniesViewer</members>
+        <members>companyCard</members>
+        <name>LightningComponentBundle</name>
+    </types>
+    
+    <!-- Remote Site Settings -->
+    <types>
+        <members>Companies_House_API</members>
+        <name>RemoteSiteSetting</name>
+    </types>
+    
+    <!-- Static Resources -->
+    <types>
+        <members>companiesHouseBanner</members>
+        <name>StaticResource</name>
+    </types>
+    
+    <version>58.0</version>
+</Package> 

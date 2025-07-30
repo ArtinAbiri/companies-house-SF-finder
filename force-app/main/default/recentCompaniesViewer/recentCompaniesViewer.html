@@ -1,0 +1,283 @@
+<template>
+    <lightning-card>
+        <!-- Companies House Banner Image -->
+        <div class="banner-section">
+            <img 
+                src={bannerImageUrl} 
+                alt="Companies House Banner" 
+                class="banner-image">
+            <div class="banner-text">
+                {bannerText}
+            </div>
+        </div>
+        
+        <div slot="header" class="slds-card__header">
+            <h2 class="slds-text-heading_small">
+                <lightning-icon icon-name="standard:account" size="small"></lightning-icon>
+                Recent Companies from Companies House
+            </h2>
+        </div>
+        
+        <div slot="actions">
+            <lightning-button-icon 
+                icon-name="utility:refresh" 
+                variant="border-filled" 
+                onclick={handleRefresh} 
+                title="Refresh Companies">
+            </lightning-button-icon>
+        </div>
+        
+        <!-- Loading Section -->
+        <template if:true={isLoading}>
+            <div class="loading-section">
+                <lightning-spinner 
+                    alternative-text="Loading recent companies..." 
+                    size="medium">
+                </lightning-spinner>
+                <p class="loading-text">Loading recent companies...</p>
+                <div class="loading-dots">
+                    <div class="loading-dot"></div>
+                    <div class="loading-dot"></div>
+                    <div class="loading-dot"></div>
+                </div>
+            </div>
+        </template>
+
+        <!-- Error Message -->
+        <template if:true={hasError}>
+            <div class="error-section">
+                <lightning-icon icon-name="utility:error" size="large"></lightning-icon>
+                <h3>Unable to Load Companies</h3>
+                <p>Please try refreshing the page or contact your administrator.</p>
+            </div>
+        </template>
+
+        <!-- Companies List -->
+        <template if:true={hasCompanies}>
+            <div class="results-section">
+                <div class="results-header">
+                    <h3 class="slds-text-heading_small">
+                        Found <strong>{totalCompanies}</strong> active companies
+                    </h3>
+                </div>
+                
+                <!-- Filter Section -->
+                <div class="filter-section">
+                    <div class="filter-container">
+                        <div class="filter-row">
+                            <!-- SIC Code Dropdown -->
+                            <div class="filter-item sic-dropdown-container">
+                                <label class="filter-label">Industry (SIC Code)</label>
+                                <div class="sic-dropdown">
+                                    <button 
+                                        type="button" 
+                                        class="sic-dropdown-button"
+                                        onclick={handleSICDropdownClick}
+                                        title={selectedSICLabel}>
+                                        <span class="sic-dropdown-text">{selectedSICLabel}</span>
+                                        <lightning-icon 
+                                            icon-name="utility:down" 
+                                            size="x-small"
+                                            class="sic-dropdown-icon">
+                                        </lightning-icon>
+                                    </button>
+                                    
+                                    <template if:true={showSICDropdown}>
+                                        <div class="sic-dropdown-menu">
+                                            <div class="sic-search-container">
+                                                <lightning-input
+                                                    type="search"
+                                                    placeholder="Search SIC codes..."
+                                                    value={sicSearchTerm}
+                                                    onchange={handleSICSearchChange}
+                                                    class="sic-search-input">
+                                                </lightning-input>
+                                            </div>
+                                            <div class="sic-options-container">
+                                                <template for:each={filteredSICOptions} for:item="option">
+                                                    <div 
+                                                        key={option.code}
+                                                        class="sic-option"
+                                                        data-code={option.code}
+                                                        data-description={option.description}
+                                                        onclick={handleSICOptionSelect}>
+                                                        <span class="sic-code">{option.code}</span>
+                                                        <span class="sic-description">{option.description}</span>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    
+                                    <template if:true={selectedSICCode}>
+                                        <button 
+                                            type="button" 
+                                            class="sic-clear-button"
+                                            onclick={handleClearSIC}
+                                            title="Clear SIC Code">
+                                            <lightning-icon icon-name="utility:close" size="x-small"></lightning-icon>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+                            
+                            <!-- Company Status Dropdown -->
+                            <div class="filter-item status-dropdown-container">
+                                <label class="filter-label">Company Status</label>
+                                <div class="status-dropdown">
+                                    <button
+                                        type="button"
+                                        class="status-dropdown-button"
+                                        onclick={handleStatusDropdownClick}
+                                        title={selectedStatusLabel}>
+                                        <span class="status-dropdown-text">{selectedStatusLabel}</span>
+                                        <lightning-icon
+                                            icon-name="utility:down"
+                                            size="x-small"
+                                            class="status-dropdown-icon">
+                                        </lightning-icon>
+                                    </button>
+
+                                    <template if:true={showStatusDropdown}>
+                                        <div class="status-dropdown-menu">
+                                            <div class="status-options-container">
+                                                <template for:each={companyStatusOptions} for:item="status">
+                                                    <div 
+                                                        key={status.value}
+                                                        class="status-option">
+                                                        <lightning-input
+                                                            type="checkbox"
+                                                            label={status.label}
+                                                            checked={status.isSelected}
+                                                            onchange={handleStatusOptionToggle}
+                                                            data-value={status.value}
+                                                            class="status-checkbox">
+                                                        </lightning-input>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <template if:true={selectedCompanyStatuses.length}>
+                                        <button
+                                            type="button"
+                                            class="status-clear-button"
+                                            onclick={handleClearStatuses}
+                                            title="Clear Statuses">
+                                            <lightning-icon icon-name="utility:close" size="x-small"></lightning-icon>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <!-- Filter Buttons -->
+                            <div class="filter-buttons">
+                                <lightning-button
+                                    label="Apply Filters"
+                                    variant="brand"
+                                    onclick={handleApplyFilters}
+                                    disabled={isLoading}
+                                    class="filter-button">
+                                </lightning-button>
+                                <lightning-button
+                                    label="Clear Filters"
+                                    variant="neutral"
+                                    onclick={handleClearFilters}
+                                    disabled={isLoading}
+                                    class="filter-button">
+                                </lightning-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Search Bar -->
+                <div class="search-section">
+                    <div class="search-container">
+                        <lightning-input
+                            type="search"
+                            label="Search Companies"
+                            placeholder="Enter company name to search..."
+                            value={searchTerm}
+                            onchange={handleSearchChange}
+                            class="search-input">
+                        </lightning-input>
+                        <lightning-button
+                            label="Search"
+                            variant="brand"
+                            onclick={handleSearch}
+                            disabled={isSearching}
+                            class="search-button">
+                        </lightning-button>
+                        <lightning-button
+                            label="Clear"
+                            variant="neutral"
+                            onclick={handleClearSearch}
+                            disabled={isSearching}
+                            class="clear-button">
+                        </lightning-button>
+                    </div>
+                </div>
+                
+                <div class="companies-grid">
+                    <template for:each={displayedCompanies} for:item="company">
+                        <div key={company.company_number} class="company-card-wrapper">
+                            <c-company-card company={company}></c-company-card>
+                        </div>
+                    </template>
+                </div>
+                
+                <!-- Pagination -->
+                <template if:true={showPagination}>
+                    <div class="pagination-section">
+                        <div class="pagination-info">
+                            Showing {displayStartIndex} to {displayEndIndex} of {totalCompanies} companies
+                        </div>
+                        <div class="pagination-controls">
+                            <lightning-button
+                                label="Previous"
+                                variant="neutral"
+                                onclick={handlePreviousPage}
+                                disabled={isFirstPage}
+                                class="pagination-btn">
+                            </lightning-button>
+                            
+                            <template for:each={pageNumbers} for:item="pageNum">
+                                <lightning-button
+                                    key={pageNum}
+                                    label={pageNum}
+                                    variant="neutral"
+                                    onclick={handlePageChange}
+                                    data-page={pageNum}
+                                    class={pageButtonClass}>
+                                </lightning-button>
+                            </template>
+                            
+                            <lightning-button
+                                label="Next"
+                                variant="neutral"
+                                onclick={handleNextPage}
+                                disabled={isLastPage}
+                                class="pagination-btn">
+                            </lightning-button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </template>
+
+        <!-- No Data Message -->
+        <template if:false={hasCompanies}>
+            <template if:false={isLoading}>
+                <template if:false={hasError}>
+                    <div class="empty-state">
+                        <lightning-icon icon-name="utility:info" size="large"></lightning-icon>
+                        <h3>No Active Companies Found</h3>
+                        <p>There are no active companies to display at this time. Try refreshing to get the latest data.</p>
+                    </div>
+                </template>
+            </template>
+        </template>
+    </lightning-card>
+</template> 
