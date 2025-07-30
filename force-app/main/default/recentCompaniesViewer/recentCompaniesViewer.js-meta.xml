@@ -9,7 +9,9 @@
     </targets>
     <targetConfigs>
         <targetConfig targets="lightning__AppPage,lightning__HomePage,lightning__RecordPage">
+            <property name="apiKey" type="String" required="true" label="API Key" description="Your Companies House API key"/>
             <property name="bannerText" type="String" default="Discover the latest companies registered with Companies House" label="Banner Text" description="Custom text to display next to the Companies House logo"/>
+            <property name="itemsPerPage" type="Integer" default="6" label="Items Per Page" description="Number of companies to display per page"/>
         </targetConfig>
     </targetConfigs>
     <masterLabel>Companies House</masterLabel>

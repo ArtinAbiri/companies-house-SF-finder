@@ -1,8 +1,6 @@
 import { LightningElement, api, track } from 'lwc';
 import getRecentCompanies from '@salesforce/apex/CompaniesHouseController.getRecentCompanies';
 import getCompaniesBySICAndStatus from '@salesforce/apex/CompaniesHouseController.getCompaniesBySICAndStatus';
-import getCompaniesBySICOnly from '@salesforce/apex/CompaniesHouseController.getCompaniesBySICOnly';
-import getCompaniesByStatusOnly from '@salesforce/apex/CompaniesHouseController.getCompaniesByStatusOnly';
 import getSICCodeOptions from '@salesforce/apex/SICCodeHelper.getSICCodeOptions';
 import searchSICCodes from '@salesforce/apex/SICCodeHelper.searchSICCodes';
 import getCompanyStatusOptions from '@salesforce/apex/SICCodeHelper.getCompanyStatusOptions';
@@ -46,9 +44,15 @@ export default class RecentCompaniesViewer extends LightningElement {
     }
 
     connectedCallback() {
-        this.loadInitialData();
-        this.loadSICCodeOptions();
-        this.loadCompanyStatusOptions();
+        // Only load data if API key is provided
+        if (this.apiKey) {
+            this.loadInitialData();
+            this.loadSICCodeOptions();
+            this.loadCompanyStatusOptions();
+        } else {
+            this.isLoading = false;
+            this.error = 'API Key is required. Please configure the component with your Companies House API key.';
+        }
     }
 
     async loadInitialData() {
@@ -70,7 +74,7 @@ export default class RecentCompaniesViewer extends LightningElement {
 
     async loadSICCodeOptions() {
         try {
-            const options = await getSICCodeOptions({ apiKey: this.apiKey });
+            const options = await getSICCodeOptions();
             this.sicCodeOptions = options.map(option => ({
                 ...option,
                 isSelected: false
@@ -82,7 +86,7 @@ export default class RecentCompaniesViewer extends LightningElement {
 
     async loadCompanyStatusOptions() {
         try {
-            const statusOptions = await getCompanyStatusOptions({ apiKey: this.apiKey });
+            const statusOptions = await getCompanyStatusOptions();
             this.companyStatusOptions = statusOptions.map(option => ({
                 ...option,
                 isSelected: false
@@ -303,11 +307,19 @@ export default class RecentCompaniesViewer extends LightningElement {
                     apiKey: this.apiKey
                 });
             } else if (hasSIC && !hasStatus) {
-                // SIC only
-                filteredResults = await getCompaniesBySICOnly({ sicCode: this.selectedSICCode, apiKey: this.apiKey });
+                // SIC only - use the combined method with empty status
+                filteredResults = await getCompaniesBySICAndStatus({ 
+                    sicCode: this.selectedSICCode, 
+                    status: '', 
+                    apiKey: this.apiKey 
+                });
             } else if (!hasSIC && hasStatus) {
-                // Status only
-                filteredResults = await getCompaniesByStatusOnly({ companyStatuses: this.selectedCompanyStatuses, apiKey: this.apiKey });
+                // Status only - use the combined method with empty SIC
+                filteredResults = await getCompaniesBySICAndStatus({ 
+                    sicCode: '', 
+                    status: this.selectedCompanyStatuses[0], 
+                    apiKey: this.apiKey 
+                });
             } else {
                 // No filters - get recent companies
                 filteredResults = await getRecentCompanies({ apiKey: this.apiKey });
