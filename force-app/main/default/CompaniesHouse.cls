@@ -15,8 +15,10 @@ public with sharing class CompaniesHouse {
         @AuraEnabled public String company_status { get; set; }
         @AuraEnabled public Address registered_office_address { get; set; }
         @AuraEnabled public String company_type { get; set; }
+        @AuraEnabled public String type { get; set; }
         @AuraEnabled public String jurisdiction { get; set; }
         @AuraEnabled public Person first_officer { get; set; }
+        @AuraEnabled public List<String> sic_codes { get; set; }
     }
     
     public class Address {
@@ -36,5 +38,10 @@ public with sharing class CompaniesHouse {
         @AuraEnabled public Address address { get; set; }
         @AuraEnabled public String nationality { get; set; }
         @AuraEnabled public String occupation { get; set; }
+        @AuraEnabled public String forename { get; set; }
+        @AuraEnabled public String surname { get; set; }
+        @AuraEnabled public String title { get; set; }
+        @AuraEnabled public String phone_number { get; set; }
+        @AuraEnabled public String email { get; set; }
     }
 } 

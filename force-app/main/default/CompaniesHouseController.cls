@@ -412,4 +412,238 @@ public with sharing class CompaniesHouseController {
         
         return person;
     }
+    
+    /**
+     * @description Creates a Lead record from company data
+     * @param companyJSON JSON string of company data
+     * @param apiKey The Companies House API key
+     * @return String ID of the created Lead record
+     */
+    @AuraEnabled
+    public static String createLeadFromCompany(String companyJSON, String apiKey) {
+        try {
+            CompaniesHouse.Company company = (CompaniesHouse.Company) JSON.deserialize(companyJSON, CompaniesHouse.Company.class);
+            
+            Lead newLead = new Lead();
+            newLead.Company = company.company_name;
+            
+            // Use first officer as the lead name
+            if (company.first_officer != null && company.first_officer.name != null) {
+                newLead.LastName = company.first_officer.name;
+                newLead.FirstName = ''; // Clear first name to use full name in last name
+            } else {
+                // Fallback to company name if no officer
+                newLead.LastName = company.company_name;
+            }
+            
+            newLead.Status = 'Open - Not Contacted';
+            newLead.Country = 'United Kingdom';
+            
+            // Map address fields if available
+            if (company.registered_office_address != null) {
+                CompaniesHouse.Address address = company.registered_office_address;
+                newLead.Street = buildStreetAddress(address);
+                newLead.City = address.locality;
+                newLead.State = address.region;
+                newLead.PostalCode = address.postal_code;
+            }
+            
+            // Add custom fields for tracking (if they exist)
+            if (hasField(Lead.SObjectType, 'Company_Number__c')) {
+                newLead.put('Company_Number__c', company.company_number);
+            }
+            
+            if (hasField(Lead.SObjectType, 'Incorporation_Date__c')) {
+                newLead.put('Incorporation_Date__c', parseIncorporationDate(company.date_of_incorporation));
+            }
+            
+            // Add officer information if available
+            if (company.first_officer != null) {
+                if (hasField(Lead.SObjectType, 'First_Officer_Name__c')) {
+                    newLead.put('First_Officer_Name__c', company.first_officer.name);
+                }
+                if (hasField(Lead.SObjectType, 'First_Officer_Role__c')) {
+                    newLead.put('First_Officer_Role__c', company.first_officer.role);
+                }
+                if (hasField(Lead.SObjectType, 'First_Officer_Occupation__c')) {
+                    newLead.put('First_Officer_Occupation__c', company.first_officer.occupation);
+                }
+            }
+            
+            insert newLead;
+            return newLead.Id;
+            
+        } catch (Exception e) {
+            System.debug('Error in createLeadFromCompany: ' + e.getMessage());
+            throw new AuraHandledException('Failed to create Lead: ' + e.getMessage());
+        }
+    }
+    
+    /**
+     * @description Creates an Account record from company data with a Contact for the first officer
+     * @param companyJSON JSON string of company data
+     * @param apiKey The Companies House API key
+     * @return String ID of the created Account record
+     */
+    @AuraEnabled
+    public static String createAccountFromCompany(String companyJSON, String apiKey) {
+        try {
+            CompaniesHouse.Company company = (CompaniesHouse.Company) JSON.deserialize(companyJSON, CompaniesHouse.Company.class);
+            
+            Account newAccount = new Account();
+            newAccount.Name = company.company_name;
+            newAccount.BillingCountry = 'United Kingdom';
+            
+            // Map address fields if available
+            if (company.registered_office_address != null) {
+                CompaniesHouse.Address address = company.registered_office_address;
+                newAccount.BillingStreet = buildStreetAddress(address);
+                newAccount.BillingCity = address.locality;
+                newAccount.BillingState = address.region;
+                newAccount.BillingPostalCode = address.postal_code;
+            }
+            
+            // Add custom fields for tracking (if they exist)
+            if (hasField(Account.SObjectType, 'Company_Number__c')) {
+                newAccount.put('Company_Number__c', company.company_number);
+            }
+            
+            if (hasField(Account.SObjectType, 'Incorporation_Date__c')) {
+                newAccount.put('Incorporation_Date__c', parseIncorporationDate(company.date_of_incorporation));
+            }
+            
+            // Add officer information if available
+            if (company.first_officer != null) {
+                if (hasField(Account.SObjectType, 'First_Officer_Name__c')) {
+                    newAccount.put('First_Officer_Name__c', company.first_officer.name);
+                }
+                if (hasField(Account.SObjectType, 'First_Officer_Role__c')) {
+                    newAccount.put('First_Officer_Role__c', company.first_officer.role);
+                }
+                if (hasField(Account.SObjectType, 'First_Officer_Occupation__c')) {
+                    newAccount.put('First_Officer_Occupation__c', company.first_officer.occupation);
+                }
+            }
+            
+            insert newAccount;
+            
+            // Create a Contact for the first officer if available
+            if (company.first_officer != null && company.first_officer.name != null) {
+                Contact newContact = new Contact();
+                newContact.AccountId = newAccount.Id;
+                newContact.LastName = company.first_officer.name;
+                newContact.FirstName = ''; // Clear first name to use full name in last name
+                newContact.Title = company.first_officer.role;
+                
+                // Map officer address if available
+                if (company.first_officer.address != null) {
+                    CompaniesHouse.Address address = company.first_officer.address;
+                    newContact.MailingStreet = buildStreetAddress(address);
+                    newContact.MailingCity = address.locality;
+                    newContact.MailingState = address.region;
+                    newContact.MailingPostalCode = address.postal_code;
+                    newContact.MailingCountry = address.country;
+                }
+                
+                // Add custom fields for officer information
+                if (hasField(Contact.SObjectType, 'Occupation__c')) {
+                    newContact.put('Occupation__c', company.first_officer.occupation);
+                }
+                if (hasField(Contact.SObjectType, 'Nationality__c')) {
+                    newContact.put('Nationality__c', company.first_officer.nationality);
+                }
+                if (hasField(Contact.SObjectType, 'Date_of_Birth__c')) {
+                    newContact.put('Date_of_Birth__c', parseDateOfBirth(company.first_officer.date_of_birth));
+                }
+                
+                insert newContact;
+            }
+            
+            return newAccount.Id;
+            
+        } catch (Exception e) {
+            System.debug('Error in createAccountFromCompany: ' + e.getMessage());
+            throw new AuraHandledException('Failed to create Account: ' + e.getMessage());
+        }
+    }
+    
+    /**
+     * @description Builds a complete street address from address components
+     * @param address Address object
+     * @return String Complete street address
+     */
+    private static String buildStreetAddress(CompaniesHouse.Address address) {
+        List<String> addressParts = new List<String>();
+        
+        if (String.isNotBlank(address.premises)) {
+            addressParts.add(address.premises);
+        }
+        if (String.isNotBlank(address.address_line_1)) {
+            addressParts.add(address.address_line_1);
+        }
+        if (String.isNotBlank(address.address_line_2)) {
+            addressParts.add(address.address_line_2);
+        }
+        
+        return String.join(addressParts, ', ');
+    }
+    
+    /**
+     * @description Parses incorporation date string to Date
+     * @param dateString Date string from API
+     * @return Date Parsed date
+     */
+    private static Date parseIncorporationDate(String dateString) {
+        if (String.isBlank(dateString)) return null;
+        
+        try {
+            // Assuming format YYYY-MM-DD
+            List<String> dateParts = dateString.split('-');
+            if (dateParts.size() >= 3) {
+                Integer year = Integer.valueOf(dateParts[0]);
+                Integer month = Integer.valueOf(dateParts[1]);
+                Integer day = Integer.valueOf(dateParts[2]);
+                return Date.newInstance(year, month, day);
+            }
+        } catch (Exception e) {
+            System.debug('Error parsing date: ' + dateString);
+        }
+        
+        return null;
+    }
+
+    /**
+     * @description Parses date of birth string to Date
+     * @param dateString Date string from API
+     * @return Date Parsed date
+     */
+    private static Date parseDateOfBirth(String dateString) {
+        if (String.isBlank(dateString)) return null;
+
+        try {
+            // Assuming format YYYY-MM-DD
+            List<String> dateParts = dateString.split('-');
+            if (dateParts.size() >= 3) {
+                Integer year = Integer.valueOf(dateParts[0]);
+                Integer month = Integer.valueOf(dateParts[1]);
+                Integer day = Integer.valueOf(dateParts[2]);
+                return Date.newInstance(year, month, day);
+            }
+        } catch (Exception e) {
+            System.debug('Error parsing date of birth: ' + dateString);
+        }
+
+        return null;
+    }
+    
+    /**
+     * @description Checks if a field exists on an SObject type
+     * @param objectType SObjectType to check
+     * @param fieldName API name of the field
+     * @return Boolean True if field exists
+     */
+    private static Boolean hasField(SObjectType objectType, String fieldName) {
+        Map<String, SObjectField> fieldsMap = objectType.getDescribe().fields.getMap();
+        return fieldsMap.containsKey(fieldName.toLowerCase());
+    }
 } 
