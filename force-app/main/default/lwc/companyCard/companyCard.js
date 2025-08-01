@@ -45,7 +45,7 @@ export default class CompanyCard extends NavigationMixin(LightningElement) {
                 return `${day}/${month}/${year}`;
             }
         } catch (error) {
-            console.error('Error formatting incorporation date:', error);
+
         }
         
         return this.company.date_of_incorporation;
@@ -142,7 +142,7 @@ export default class CompanyCard extends NavigationMixin(LightningElement) {
             this.showToast('Success', `${recordType} created successfully!`, 'success');
             
         } catch (error) {
-            console.error('Error creating record:', error);
+
             this.showToast('Error', `Failed to create ${recordType}: ${error.body?.message || error.message}`, 'error');
         } finally {
             this.isProcessing = false;

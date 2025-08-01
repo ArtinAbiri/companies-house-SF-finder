@@ -80,7 +80,7 @@ export default class RecentCompaniesViewer extends LightningElement {
                 isSelected: false
             }));
         } catch (error) {
-            console.error('Error loading SIC code options:', error);
+
         }
     }
 
@@ -92,7 +92,7 @@ export default class RecentCompaniesViewer extends LightningElement {
                 isSelected: false
             }));
         } catch (error) {
-            console.error('Error loading company status options:', error);
+
         }
     }
 
@@ -231,7 +231,7 @@ export default class RecentCompaniesViewer extends LightningElement {
             try {
                 this.filteredSICOptions = await searchSICCodes({ searchTerm: this.sicSearchTerm, apiKey: this.apiKey });
             } catch (error) {
-                console.error('Error searching SIC codes:', error);
+    
                 this.filteredSICOptions = [];
             }
         }

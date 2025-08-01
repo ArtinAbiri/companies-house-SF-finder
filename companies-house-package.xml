@@ -2,6 +2,7 @@
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
     <!-- Apex Classes -->
     <types>
+        <members>CompaniesHouse</members>
         <members>CompaniesHouseController</members>
         <members>SICCodeHelper</members>
         <name>ApexClass</name>
@@ -22,7 +23,7 @@
     
     <!-- Static Resources -->
     <types>
-        <members>companiesHouseBanner</members>
+        <members>CH</members>
         <name>StaticResource</name>
     </types>
     

@@ -46,8 +46,7 @@ public with sharing class CompaniesHouseController {
             for (String query : searchQueries) {
                 String endpoint = BASE_URL + SEARCH_ENDPOINT + '?q=' + EncodingUtil.urlEncode(query, 'UTF-8') + '&items_per_page=100&start_index=0';
                 
-                System.debug('Search Query: ' + query);
-                System.debug('Search Endpoint: ' + endpoint);
+                
                 
                 HttpRequest request = new HttpRequest();
                 request.setEndpoint(endpoint);
@@ -59,8 +58,7 @@ public with sharing class CompaniesHouseController {
                 Http http = new Http();
                 HttpResponse response = http.send(request);
                 
-                System.debug('Response Status: ' + response.getStatusCode());
-                System.debug('Response Body: ' + response.getBody());
+
                 
                 if (response.getStatusCode() == 200) {
                     String responseBody = response.getBody();
@@ -87,8 +85,6 @@ public with sharing class CompaniesHouseController {
                             }
                         }
                     }
-                } else {
-                    System.debug('Error for query ' + query + ': ' + response.getStatusCode() + ' - ' + response.getBody());
                 }
                 
                 // Stop if we have enough companies
@@ -102,7 +98,7 @@ public with sharing class CompaniesHouseController {
             return allCompanies;
             
         } catch (Exception e) {
-            System.debug('Error in getRecentCompanies: ' + e.getMessage());
+
             return new List<CompaniesHouse.Company>();
         }
     }
@@ -139,7 +135,7 @@ public with sharing class CompaniesHouseController {
             }
             
         } catch (Exception e) {
-            System.debug('Error getting first officer for company ' + companyNumber + ': ' + e.getMessage());
+
         }
         
         return null;
@@ -192,12 +188,12 @@ public with sharing class CompaniesHouseController {
                 
                 return companies;
             } else {
-                System.debug('Error response: ' + response.getBody());
+
                 return new List<CompaniesHouse.Company>();
             }
             
         } catch (Exception e) {
-            System.debug('Error in searchCompanies: ' + e.getMessage());
+
             return new List<CompaniesHouse.Company>();
         }
     }
@@ -236,7 +232,7 @@ public with sharing class CompaniesHouseController {
             return allCompanies != null ? allCompanies : new List<CompaniesHouse.Company>();
             
         } catch (Exception e) {
-            System.debug('Error in getCompaniesBySICAndStatus: ' + e.getMessage());
+
             return new List<CompaniesHouse.Company>();
         }
     }
@@ -266,7 +262,7 @@ public with sharing class CompaniesHouseController {
             
             return companies;
         } catch (Exception e) {
-            System.debug('Error in searchAndFilterCompanies: ' + e.getMessage());
+
             return new List<CompaniesHouse.Company>();
         }
     }
@@ -313,7 +309,7 @@ public with sharing class CompaniesHouseController {
                 return limitedCompanies;
             }
         } catch (Exception e) {
-            System.debug('Error in filterCompaniesBySIC: ' + e.getMessage());
+
             // Fallback: return a subset of original companies
             List<CompaniesHouse.Company> limitedCompanies = new List<CompaniesHouse.Company>();
             Integer maxResults = Math.min(companies.size(), 10);
@@ -474,7 +470,7 @@ public with sharing class CompaniesHouseController {
             return newLead.Id;
             
         } catch (Exception e) {
-            System.debug('Error in createLeadFromCompany: ' + e.getMessage());
+
             throw new AuraHandledException('Failed to create Lead: ' + e.getMessage());
         }
     }
@@ -562,7 +558,7 @@ public with sharing class CompaniesHouseController {
             return newAccount.Id;
             
         } catch (Exception e) {
-            System.debug('Error in createAccountFromCompany: ' + e.getMessage());
+
             throw new AuraHandledException('Failed to create Account: ' + e.getMessage());
         }
     }
@@ -606,7 +602,7 @@ public with sharing class CompaniesHouseController {
                 return Date.newInstance(year, month, day);
             }
         } catch (Exception e) {
-            System.debug('Error parsing date: ' + dateString);
+
         }
         
         return null;
@@ -630,7 +626,7 @@ public with sharing class CompaniesHouseController {
                 return Date.newInstance(year, month, day);
             }
         } catch (Exception e) {
-            System.debug('Error parsing date of birth: ' + dateString);
+
         }
 
         return null;

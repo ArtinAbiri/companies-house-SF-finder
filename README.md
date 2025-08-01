@@ -1,281 +1,199 @@
-# Companies House Integration for Salesforce
+# Companies House Salesforce Component
 
-A Lightning Web Component (LWC) package that integrates with the UK Companies House Public Data API to display and search for company information directly within Salesforce.
+A Lightning Web Component for Salesforce that integrates with the UK Companies House API to search, display, and create records from company data.
+
+![Companies House Component](https://img.shields.io/badge/Salesforce-Lightning%20Web%20Component-blue)
+![API Version](https://img.shields.io/badge/API%20Version-62.0-green)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ## 🚀 Features
 
-- **Real-time Company Data**: Fetch live company information from Companies House API
-- **Advanced Filtering**: Filter companies by SIC codes (industry) and company status
-- **Search Functionality**: Search companies by name with instant results
-- **Officer Information**: Display first officer details for each company
-- **Beautiful UI**: Modern, responsive design with smooth animations
-- **Intelligent Caching**: 5-minute cache to improve performance and reduce API calls
-- **Pagination**: Navigate through large result sets efficiently
-- **Mobile Responsive**: Works seamlessly on desktop and mobile devices
+- **Real-time Company Search**: Search UK companies using the Companies House API
+- **Advanced Filtering**: Filter by SIC codes, company status, and incorporation dates
+- **Lead/Account Creation**: Convert company data into Salesforce Leads or Accounts
+- **Responsive Design**: Mobile-friendly interface with modern styling
+- **Caching**: Built-in caching for improved performance
+- **Error Handling**: Robust error handling and user feedback
 
-## 📋 Use Cases
+## 📋 Prerequisites
 
-This component is perfect for:
-- **Sales Teams**: Research potential prospects and their company details
-- **Business Development**: Identify new companies in specific industries
-- **Lead Generation**: Find recently incorporated companies for outreach
-- **Market Research**: Analyze company trends and industry data
-- **Compliance Teams**: Verify company information and officer details
+- Salesforce org with Lightning Experience enabled
+- Companies House API key (free from [Companies House Developer Hub](https://developer.company-information.service.gov.uk/))
+- System Administrator access to deploy components
 
-## 🛠️ Prerequisites
+## 🛠️ Installation
 
-- Salesforce org with API access
-- Companies House API key (free from https://developer.company-information.service.gov.uk/)
-- Salesforce CLI (for deployment)
+### Option 1: Standard Deployment (Recommended)
 
-## 📦 Package Contents
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/ArtinAbiri/companies-house-SF-finder.git
+   cd companies-house-SF-finder
+   ```
+
+2. **Deploy to your Salesforce org**:
+   ```bash
+   sf project deploy start --source-dir force-app/main/default --target-org your-org-alias
+   ```
+
+### Option 2: Package Deployment
+
+1. **Deploy using package.xml**:
+   ```bash
+   sf project deploy start --manifest companies-house-package.xml --target-org your-org-alias
+   ```
+
+## ⚙️ Configuration
+
+### 1. Set up Remote Site Settings
+
+The deployment includes the required Remote Site Setting, but verify it's configured:
+
+- **Name**: `Companies_House_API`
+- **Remote Site URL**: `https://api.company-information.service.gov.uk`
+- **Active**: ✅ Checked
+
+### 2. Get your API Key
+
+1. Visit [Companies House Developer Hub](https://developer.company-information.service.gov.uk/)
+2. Create a free account
+3. Generate an API key
+4. Keep this key secure - you'll need it when using the component
+
+### 3. Add Component to Lightning Pages
+
+1. Go to **Setup** → **Lightning App Builder**
+2. Edit or create a Lightning page
+3. Drag the **"Companies House"** component onto the page
+4. Configure the component properties:
+   - **API Key**: Your Companies House API key
+   - **Banner Text**: Custom text (optional)
+   - **Items Per Page**: Number of companies to display (default: 6)
+
+## 🎯 Usage
+
+### Basic Search
+1. Enter a company name or number in the search field
+2. Click **Search** to find companies
+3. Use filters to narrow results by:
+   - SIC codes (business activities)
+   - Company status (active, dissolved, etc.)
+   - Incorporation date range
+
+### Creating Records
+1. Find a company in the search results
+2. Click **Create Lead** or **Create Account**
+3. The component will create a Salesforce record with:
+   - Company information
+   - Registered address
+   - Officer details (if available)
+   - Custom fields (if they exist in your org)
+
+## 🏗️ Architecture
+
+### Components
+
+- **`recentCompaniesViewer`**: Main component for searching and displaying companies
+- **`companyCard`**: Child component for individual company display and record creation
 
 ### Apex Classes
-- `CompaniesHouseController` - Main API integration and business logic
-- `SICCodeHelper` - SIC code management and filtering utilities
 
-### Lightning Web Components
-- `recentCompaniesViewer` - Main component for displaying and filtering companies
-- `companyCard` - Individual company card component with detailed information
+- **`CompaniesHouseController`**: Main controller with API integration and record creation
+- **`CompaniesHouse`**: Wrapper classes for API responses
+- **`SICCodeHelper`**: Helper class for SIC code management and filtering
 
-### Remote Site Settings
-- `Companies_House_API` - Allows callouts to Companies House API
+### Custom Fields (Optional)
 
-### Static Resources
-- `companiesHouseBanner` - Companies House branding image
+The component can populate custom fields if they exist in your org:
 
-## 🚀 Quick Start
+**Lead/Account Fields:**
+- `Company_Number__c` (Text)
+- `Incorporation_Date__c` (Date)
+- `First_Officer_Name__c` (Text)
+- `First_Officer_Role__c` (Text)
+- `First_Officer_Occupation__c` (Text)
 
-### Step 1: Get Your API Key
+**Contact Fields:**
+- `Occupation__c` (Text)
+- `Nationality__c` (Text)
+- `Date_of_Birth__c` (Date)
 
-1. Visit https://developer.company-information.service.gov.uk/
-2. Sign up for a free account
-3. Generate an API key
-4. Note down your API key for the next steps
-
-### Step 2: Deploy to Your Org
-
-#### Option A: Using Salesforce CLI (Recommended)
-
-```bash
-# Clone this repository
-git clone https://github.com/your-username/companies-house-salesforce.git
-cd companies-house-salesforce
-
-# Switch to master branch (if not already on it)
-git checkout master
-
-# Deploy the package
-sf project deploy start --source-dir force-app/main/default --manifest companies-house-package.xml
-```
-
-#### Option B: Using Metadata API
-
-1. Download the `force-app` folder
-2. Deploy via your preferred Salesforce deployment tool
-3. Ensure all components are deployed successfully
-
-### Step 3: Configure the Component
-
-1. **Add to a Lightning Page:**
-   - Go to Setup → Lightning App Builder
-   - Create a new Lightning Page or edit an existing one
-   - Add the `Companies House` component
-   - Set the `apiKey` attribute to your Companies House API key
-   - Save and activate the page
-
-2. **Or Add to an Existing Page:**
-   - Edit any Lightning page
-   - Add the `Companies House` component
-   - Configure the `apiKey` attribute
-   - Save the page
-
-### Step 4: Verify Remote Site Settings
-
-The package includes a Remote Site Setting, but verify it's active:
-
-1. Go to Setup → Security → Remote Site Settings
-2. Find `Companies_House_API`
-3. Ensure it's active and the URL is: `https://api.company-information.service.gov.uk`
-
-## 🔧 Configuration
-
-### Component Attributes
-
-The `Companies House` component accepts the following attributes:
-
-- `apiKey` (Required): Your Companies House API key
-- `bannerText` (Optional): Custom banner text (default: "Discover the latest companies registered with Companies House")
-- `itemsPerPage` (Optional): Number of companies per page (default: 6)
-
-### Example Usage
-
-```html
-<c-recent-companies-viewer 
-    api-key="your-api-key-here"
-    banner-text="Find Your Next Business Partner"
-    items-per-page="8">
-</c-recent-companies-viewer>
-```
-
-## 📊 How to Use
-
-### Basic Usage
-The component automatically loads recent companies when the page loads.
-
-### Filtering Companies
-
-1. **By Industry (SIC Code):**
-   - Click the "Industry (SIC Code)" dropdown
-   - Search for your desired SIC code
-   - Select the code to filter companies
-
-2. **By Company Status:**
-   - Click the "Company Status" dropdown
-   - Select one or more statuses (Active, Registered, etc.)
-   - Apply filters to see results
-
-3. **Combined Filters:**
-   - Use both SIC code and status filters together
-   - Click "Apply Filters" to see combined results
-
-### Searching Companies
-1. Enter a company name in the search box
-2. Click "Search" to find matching companies
-3. Use "Clear" to reset the search
-
-### Navigation
-- Use pagination controls to navigate through results
-- Click "Refresh" to clear cache and reload data
-- Use "Clear Filters" to reset all filters
-
-## 🔍 API Endpoints Used
-
-The component uses the following Companies House API endpoints:
-
-- `GET /search/companies` - Basic company search
-- `GET /company/{company_number}/officers` - Company officers
-- `GET /company/{company_number}` - Company details
-
-## 🎨 Customization
+## 🔧 Customization
 
 ### Styling
-The component uses CSS custom properties that can be overridden:
+Modify the CSS files in the LWC components:
+- `recentCompaniesViewer.css` - Main component styling
+- `companyCard.css` - Individual company card styling
 
-```css
-/* Custom colors */
-:host {
-    --primary-color: #0176d3;
-    --secondary-color: #1ab394;
-    --background-color: #ffffff;
-}
-```
+### API Configuration
+Update constants in `CompaniesHouseController.cls`:
+- `MAX_RESULTS` - Maximum companies to fetch
+- `CACHE_DURATION_MINUTES` - Cache duration
 
-### Component Attributes
-- `bannerText` - Custom banner text
-- `itemsPerPage` - Number of companies per page
-- `showPagination` - Show/hide pagination controls
+### Field Mapping
+Customize field mapping in the `createLeadFromCompany` and `createAccountFromCompany` methods.
 
-## 🚨 Troubleshooting
+## 📊 API Limits
 
-### Common Issues
-
-1. **"Too many callouts" error:**
-   - The component limits results to 20 companies to stay within Salesforce limits
-   - This is by design to prevent governor limit issues
-
-2. **No companies found:**
-   - Check your API key is correct
-   - Verify the Remote Site Setting is active
-   - Check the debug logs for API errors
-
-3. **Component not loading:**
-   - Ensure all components are deployed
-   - Check for JavaScript errors in browser console
-   - Verify the component is added to a Lightning page
-
-### Debug Information
-The component includes extensive debug logging:
-- Check Setup → Debug → Debug Logs
-- Look for `CompaniesHouseController` debug messages
-- API requests and responses are logged
-
-## 📋 Requirements
-
-### Salesforce Requirements
-- API Enabled permission
-- Lightning Component Framework
-- Remote Site Settings access
-
-### API Requirements
-- Companies House API key (free)
-- Internet access from Salesforce org
+- **Companies House API**: 600 requests per 5 minutes
+- **Component Caching**: Reduces API calls through intelligent caching
+- **Batch Processing**: Efficiently handles multiple API requests
 
 ## 🔒 Security
 
-### Data Handling
-- Company data is cached for 5 minutes to improve performance
-- No sensitive data is stored permanently
-- API calls are made securely via HTTPS
+- API keys are handled securely through component properties
+- All API calls use HTTPS
+- Input validation prevents injection attacks
+- Error messages don't expose sensitive information
 
-### Permissions
-- The component requires no special user permissions
-- API calls are made in system context
-- Users only see the component UI
+## 🐛 Troubleshooting
 
-## 📈 Performance
+### Common Issues
 
-### Optimization Features
-- **Intelligent Caching**: 5-minute cache for API responses
-- **Limited Results**: Maximum 20 companies to prevent callout limits
-- **Lazy Loading**: Officers are fetched only when needed
-- **Pagination**: Large result sets are paginated
+1. **"Remote site not configured"**
+   - Verify Remote Site Settings are properly configured
+   - Check the URL matches exactly: `https://api.company-information.service.gov.uk`
 
-### Best Practices
-- Use filters to reduce API calls
-- Clear cache periodically for fresh data
-- Monitor debug logs for performance issues
+2. **"Invalid API key"**
+   - Verify your API key is correct
+   - Ensure the key is active in your Companies House account
+
+3. **"No companies found"**
+   - Try broader search terms
+   - Check if the company exists in Companies House database
+   - Verify API key permissions
+
+### Debug Steps
+
+1. Check browser console for JavaScript errors
+2. Review Salesforce debug logs for Apex errors
+3. Verify component properties are set correctly
+4. Test API key independently using Companies House API documentation
 
 ## 🤝 Contributing
 
-We welcome contributions! To contribute:
-
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Commit changes: `git commit -m 'Add your feature'`
+4. Push to branch: `git push origin feature/your-feature`
+5. Submit a pull request
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🔄 Version History
+## 🙏 Acknowledgments
 
-### Version 1.0.0
-- Initial release
-- Basic company search and display
-- SIC code and status filtering
-- Officer information display
-- Responsive design with animations
-- Caching and performance optimization
+- [Companies House](https://www.gov.uk/government/organisations/companies-house) for providing the API
+- Salesforce Developer Community for Lightning Web Component resources
+- Contributors and testers who helped improve this component
 
 ## 📞 Support
 
-### Getting Help
-1. Check the debug logs for error messages
-2. Verify your API key is working
-3. Test the Companies House API directly
-4. Review the component documentation
-
-### Issues
-If you encounter any issues:
-1. Check the troubleshooting section above
-2. Search existing issues on GitHub
-3. Create a new issue with detailed information
+- **Issues**: [GitHub Issues](https://github.com/ArtinAbiri/companies-house-SF-finder/issues)
+- **Documentation**: [Companies House API Docs](https://developer.company-information.service.gov.uk/api/docs/)
+- **Salesforce**: [Lightning Web Components Developer Guide](https://developer.salesforce.com/docs/component-library/documentation/en/lwc)
 
 ---
 
-**Note**: This package requires a valid Companies House API key to function. The API key is free and can be obtained from the Companies House developer portal.
-
-**Important**: Never commit your API key to version control. Always use the component's `apiKey` attribute to pass the key securely. 
+**Made with ❤️ for the Salesforce community**

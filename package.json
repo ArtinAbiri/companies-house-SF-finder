@@ -4,8 +4,9 @@
     "description": "Salesforce Lightning Web Component for UK Companies House API integration",
     "main": "index.js",
     "scripts": {
-        "deploy": "./deploy.sh",
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "deploy:source": "sf project deploy start --source-dir force-app/main/default",
+        "deploy:package": "sf project deploy start --manifest companies-house-package.xml",
+        "test": "echo \"No tests configured\" && exit 0"
     },
     "keywords": [
         "salesforce",
