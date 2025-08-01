@@ -99,113 +99,75 @@ export default class CompanyCard extends NavigationMixin(LightningElement) {
         if (!this.company || !this.company.company_number) {
             return null;
         }
-        
         return `https://find-and-update.company-information.service.gov.uk/company/${this.company.company_number}`;
     }
 
-    get hasSicCodes() {
-        return this.company && this.company.sic_codes && this.company.sic_codes.length > 0;
-    }
-
-    get sicCodesDisplay() {
-        if (!this.hasSicCodes) return 'N/A';
-        return this.company.sic_codes.join(', ');
-    }
-
     handleCardClick(event) {
-        // Prevent card click when clicking on buttons
-        if (event.target.tagName === 'BUTTON' || event.target.closest('button')) {
-            return;
-        }
+        // Don't trigger if clicking on buttons or success section
+        const target = event.target;
+        const isButton = target.closest('lightning-button') || target.closest('.card-footer') || target.closest('.success-section');
         
-        // Navigate to Companies House website
-        if (this.companiesHouseUrl) {
+        if (!isButton && this.companiesHouseUrl) {
             window.open(this.companiesHouseUrl, '_blank');
         }
     }
 
     handleCreateLead(event) {
-        event.stopPropagation();
+        event.stopPropagation(); // Prevent card click
         this.createRecord('Lead');
     }
 
     handleCreateAccount(event) {
-        event.stopPropagation();
+        event.stopPropagation(); // Prevent card click
         this.createRecord('Account');
     }
 
     async createRecord(recordType) {
+        this.isProcessing = true;
+        this.recordType = recordType;
+        
         try {
-            this.isProcessing = true;
-            this.showSuccess = false;
-            this.recordId = null;
-            this.recordType = null;
-            
-            const companyData = JSON.stringify(this.company);
-            let result;
+            const companyJSON = JSON.stringify(this.company);
+            let recordId;
             
             if (recordType === 'Lead') {
-                result = await createLeadFromCompany({ 
-                    companyData: companyData,
-                    apiKey: this.apiKey
-                });
+                recordId = await createLeadFromCompany({ companyJSON, apiKey: this.apiKey });
             } else {
-                result = await createAccountFromCompany({ 
-                    companyData: companyData,
-                    apiKey: this.apiKey
-                });
+                recordId = await createAccountFromCompany({ companyJSON, apiKey: this.apiKey });
             }
             
-            // Extract record ID from result
-            const match = result.match(/([a-zA-Z0-9]{15,18})/);
-            if (match) {
-                this.recordId = match[1];
-                this.recordType = recordType;
-                this.showSuccess = true;
-                
-                this.showToast('Success', `${recordType} created successfully!`, 'success');
-                
-                // Hide success message after 5 seconds
-                setTimeout(() => {
-                    this.showSuccess = false;
-                }, 5000);
-            } else {
-                this.showToast('Success', result, 'success');
-            }
+            this.recordId = recordId;
+            this.showSuccess = true;
+            
+            this.showToast('Success', `${recordType} created successfully!`, 'success');
             
         } catch (error) {
             console.error('Error creating record:', error);
-            this.showToast('Error', this.getErrorMessage(error), 'error');
+            this.showToast('Error', `Failed to create ${recordType}: ${error.body?.message || error.message}`, 'error');
         } finally {
             this.isProcessing = false;
         }
     }
 
     handleViewRecord(event) {
-        if (!this.recordId) return;
-        
-        this[NavigationMixin.Navigate]({
-            type: 'standard__recordPage',
-            attributes: {
-                recordId: this.recordId,
-                actionName: 'view'
-            }
-        });
-    }
-
-    getErrorMessage(error) {
-        if (error && error.body && error.body.message) {
-            return error.body.message;
+        event.stopPropagation(); // Prevent card click
+        if (this.recordId) {
+            this[NavigationMixin.Navigate]({
+                type: 'standard__recordPage',
+                attributes: {
+                    recordId: this.recordId,
+                    actionName: 'view'
+                }
+            });
         }
-        return error ? error.message : 'An unknown error occurred';
     }
 
     showToast(title, message, variant) {
-        const event = new ShowToastEvent({
+        const evt = new ShowToastEvent({
             title: title,
             message: message,
             variant: variant
         });
-        this.dispatchEvent(event);
+        this.dispatchEvent(evt);
     }
-}
+} 

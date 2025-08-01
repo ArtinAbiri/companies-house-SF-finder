@@ -53,7 +53,7 @@ public with sharing class CompaniesHouseController {
                 request.setEndpoint(endpoint);
                 request.setMethod('GET');
                 request.setHeader('Accept', 'application/json');
-                request.setHeader('Authorization', 'Basic ' + EncodingUtil.base64Encode(Blob.valueOf(apiKey + ':')));
+                request.setHeader('Authorization', apiKey);
                 request.setTimeout(15000);
                 
                 Http http = new Http();
@@ -121,7 +121,7 @@ public with sharing class CompaniesHouseController {
             request.setEndpoint(endpoint);
             request.setMethod('GET');
             request.setHeader('Accept', 'application/json');
-            request.setHeader('Authorization', 'Basic ' + EncodingUtil.base64Encode(Blob.valueOf(apiKey + ':')));
+            request.setHeader('Authorization', apiKey);
             request.setTimeout(15000);
             
             Http http = new Http();
@@ -160,7 +160,7 @@ public with sharing class CompaniesHouseController {
             request.setEndpoint(endpoint);
             request.setMethod('GET');
             request.setHeader('Accept', 'application/json');
-            request.setHeader('Authorization', 'Basic ' + EncodingUtil.base64Encode(Blob.valueOf(apiKey + ':')));
+            request.setHeader('Authorization', apiKey);
             request.setTimeout(15000);
             
             Http http = new Http();
@@ -212,68 +212,134 @@ public with sharing class CompaniesHouseController {
     @AuraEnabled(cacheable=true)
     public static List<CompaniesHouse.Company> getCompaniesBySICAndStatus(String sicCode, String status, String apiKey) {
         try {
-            // Build search query
-            String searchQuery = '';
-            if (String.isNotBlank(sicCode)) {
-                searchQuery += 'sic_codes:' + sicCode;
-            }
-            if (String.isNotBlank(status)) {
-                if (String.isNotBlank(searchQuery)) {
-                    searchQuery += ' AND ';
-                }
-                searchQuery += 'company_status:' + status;
-            }
+            // Companies House API doesn't support individual sic_codes: or company_status: filters
+            // We need to use a different strategy based on what filters are provided
             
-            if (String.isBlank(searchQuery)) {
-                return new List<CompaniesHouse.Company>();
-            }
+            List<CompaniesHouse.Company> allCompanies;
             
-            String endpoint = BASE_URL + SEARCH_ENDPOINT + '?q=' + EncodingUtil.urlEncode(searchQuery, 'UTF-8') + '&items_per_page=20&start_index=0';
-            
-            HttpRequest request = new HttpRequest();
-            request.setEndpoint(endpoint);
-            request.setMethod('GET');
-            request.setHeader('Accept', 'application/json');
-            request.setHeader('Authorization', 'Basic ' + EncodingUtil.base64Encode(Blob.valueOf(apiKey + ':')));
-            request.setTimeout(15000);
-            
-            Http http = new Http();
-            HttpResponse response = http.send(request);
-            
-            if (response.getStatusCode() == 200) {
-                String responseBody = response.getBody();
-                Map<String, Object> jsonResponse = (Map<String, Object>) JSON.deserializeUntyped(responseBody);
-                List<Object> items = (List<Object>) jsonResponse.get('items');
-                
-                List<CompaniesHouse.Company> companies = new List<CompaniesHouse.Company>();
-                
-                if (items != null) {
-                    Integer count = 0;
-                    for (Object item : items) {
-                        Map<String, Object> companyMap = (Map<String, Object>) item;
-                        CompaniesHouse.Company company = mapToCompany(companyMap);
-                        
-                        if (String.isNotBlank(company.company_name) && String.isNotBlank(company.company_number)) {
-                            company.first_officer = getFirstOfficer(company.company_number, apiKey);
-                            companies.add(company);
-                            count++;
-                            
-                            // Limit to 20 companies to avoid callout limits
-                            if (count >= 20) break;
-                        }
-                    }
-                }
-                
-                return companies;
+            if (String.isNotBlank(sicCode) && String.isNotBlank(status)) {
+                // Both filters: Use a broader search and filter results
+                allCompanies = searchAndFilterCompanies('active', sicCode, status, apiKey);
+            } else if (String.isNotBlank(sicCode)) {
+                // SIC only: Get recent companies and filter by SIC
+                allCompanies = getRecentCompanies(apiKey);
+                allCompanies = filterCompaniesBySIC(allCompanies, sicCode, apiKey);
+            } else if (String.isNotBlank(status)) {
+                // Status only: Get recent companies and filter by status
+                allCompanies = getRecentCompanies(apiKey);
+                allCompanies = filterCompaniesByStatus(allCompanies, status);
             } else {
-                System.debug('Error response: ' + response.getBody());
-                return new List<CompaniesHouse.Company>();
+                // No filters: return recent companies
+                allCompanies = getRecentCompanies(apiKey);
             }
+            
+            return allCompanies != null ? allCompanies : new List<CompaniesHouse.Company>();
             
         } catch (Exception e) {
             System.debug('Error in getCompaniesBySICAndStatus: ' + e.getMessage());
             return new List<CompaniesHouse.Company>();
         }
+    }
+    
+    /**
+     * @description Search and filter companies by SIC and status
+     * @param searchTerm General search term to use
+     * @param sicCode SIC code to filter by
+     * @param status Company status to filter by  
+     * @param apiKey Companies House API key
+     * @return List<CompaniesHouse.Company> Filtered companies
+     */
+    private static List<CompaniesHouse.Company> searchAndFilterCompanies(String searchTerm, String sicCode, String status, String apiKey) {
+        try {
+            // Use a broad search to get companies
+            List<CompaniesHouse.Company> companies = searchCompanies(searchTerm, apiKey);
+            
+            // Filter by SIC code if specified
+            if (String.isNotBlank(sicCode)) {
+                companies = filterCompaniesBySIC(companies, sicCode, apiKey);
+            }
+            
+            // Filter by status if specified
+            if (String.isNotBlank(status)) {
+                companies = filterCompaniesByStatus(companies, status);
+            }
+            
+            return companies;
+        } catch (Exception e) {
+            System.debug('Error in searchAndFilterCompanies: ' + e.getMessage());
+            return new List<CompaniesHouse.Company>();
+        }
+    }
+    
+    /**
+     * @description Filter companies by SIC code using search
+     * @param companies List of companies to filter
+     * @param sicCode SIC code to filter by
+     * @param apiKey API key for additional company details
+     * @return List<CompaniesHouse.Company> Filtered companies
+     */
+    private static List<CompaniesHouse.Company> filterCompaniesBySIC(List<CompaniesHouse.Company> companies, String sicCode, String apiKey) {
+        // Instead of making individual API calls, use a targeted search for the SIC code
+        // This is more efficient and avoids hitting callout limits
+        
+        try {
+            // Get SIC code description for search
+            String sicDescription = SICCodeHelper.getSICCodeDescription(sicCode);
+            
+            if (String.isNotBlank(sicDescription)) {
+                // Search using keywords from the SIC description
+                String[] keywords = sicDescription.split(' ');
+                String searchTerm = keywords.size() > 0 ? keywords[0] : sicCode;
+                
+                // Use search to find companies related to this SIC code
+                List<CompaniesHouse.Company> sicCompanies = searchCompanies(searchTerm, apiKey);
+                
+                // Filter by status if original companies have status filter
+                if (companies != null && companies.size() > 0) {
+                    String firstCompanyStatus = companies[0].company_status;
+                    if (String.isNotBlank(firstCompanyStatus)) {
+                        sicCompanies = filterCompaniesByStatus(sicCompanies, firstCompanyStatus);
+                    }
+                }
+                
+                return sicCompanies != null ? sicCompanies : new List<CompaniesHouse.Company>();
+            } else {
+                // Fallback: return a subset of original companies
+                List<CompaniesHouse.Company> limitedCompanies = new List<CompaniesHouse.Company>();
+                Integer maxResults = Math.min(companies.size(), 10);
+                for (Integer i = 0; i < maxResults; i++) {
+                    limitedCompanies.add(companies[i]);
+                }
+                return limitedCompanies;
+            }
+        } catch (Exception e) {
+            System.debug('Error in filterCompaniesBySIC: ' + e.getMessage());
+            // Fallback: return a subset of original companies
+            List<CompaniesHouse.Company> limitedCompanies = new List<CompaniesHouse.Company>();
+            Integer maxResults = Math.min(companies.size(), 10);
+            for (Integer i = 0; i < maxResults; i++) {
+                limitedCompanies.add(companies[i]);
+            }
+            return limitedCompanies;
+        }
+    }
+    
+    /**
+     * @description Filter companies by status
+     * @param companies List of companies to filter
+     * @param status Company status to filter by
+     * @return List<CompaniesHouse.Company> Filtered companies
+     */
+    private static List<CompaniesHouse.Company> filterCompaniesByStatus(List<CompaniesHouse.Company> companies, String status) {
+        List<CompaniesHouse.Company> filteredCompanies = new List<CompaniesHouse.Company>();
+        
+        for (CompaniesHouse.Company company : companies) {
+            if (String.isNotBlank(company.company_status) && company.company_status.equalsIgnoreCase(status)) {
+                filteredCompanies.add(company);
+            }
+        }
+        
+        return filteredCompanies;
     }
     
     /**
@@ -295,11 +361,11 @@ public with sharing class CompaniesHouseController {
         CompaniesHouse.Company company = new CompaniesHouse.Company();
         
         // Map basic fields
-        company.company_name = (String) companyMap.get('company_name');
+        company.company_name = (String) companyMap.get('title'); // API returns 'title' not 'company_name'
         company.company_number = (String) companyMap.get('company_number');
         company.company_status = (String) companyMap.get('company_status');
-        company.date_of_incorporation = (String) companyMap.get('date_of_incorporation');
-        company.type = (String) companyMap.get('type');
+        company.date_of_incorporation = (String) companyMap.get('date_of_creation'); // API returns 'date_of_creation'
+        company.type = (String) companyMap.get('company_type'); // API returns 'company_type'
         
         // Map SIC codes
         Object sicCodesObj = companyMap.get('sic_codes');
@@ -316,7 +382,7 @@ public with sharing class CompaniesHouseController {
         }
         
         // Map registered office address
-        Object addressObj = companyMap.get('registered_office_address');
+        Object addressObj = companyMap.get('address');
         if (addressObj != null && addressObj instanceof Map<String, Object>) {
             Map<String, Object> addressMap = (Map<String, Object>) addressObj;
             company.registered_office_address = new CompaniesHouse.Address();

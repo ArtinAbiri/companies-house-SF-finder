@@ -52,16 +52,9 @@
             </div>
         </template>
 
-        <!-- Companies List -->
-        <template if:true={hasCompanies}>
-            <div class="results-section">
-                <div class="results-header">
-                    <h3 class="slds-text-heading_small">
-                        Found <strong>{totalCompanies}</strong> active companies
-                    </h3>
-                </div>
-                
-                <!-- Filter Section -->
+        <!-- Filter Section - Always visible -->
+        <template if:false={isLoading}>
+            <template if:false={hasError}>
                 <div class="filter-section">
                     <div class="filter-container">
                         <div class="filter-row">
@@ -218,6 +211,17 @@
                             class="clear-button">
                         </lightning-button>
                     </div>
+                </div>
+            </template>
+        </template>
+
+        <!-- Companies List -->
+        <template if:true={hasCompanies}>
+            <div class="results-section">
+                <div class="results-header">
+                    <h3 class="slds-text-heading_small">
+                        Found <strong>{totalCompanies}</strong> active companies
+                    </h3>
                 </div>
                 
                 <div class="companies-grid">

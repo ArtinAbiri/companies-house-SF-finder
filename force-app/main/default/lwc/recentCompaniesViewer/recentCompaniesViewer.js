@@ -7,7 +7,7 @@ import getCompanyStatusOptions from '@salesforce/apex/SICCodeHelper.getCompanySt
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import searchCompanies from '@salesforce/apex/CompaniesHouseController.searchCompanies';
 import clearCache from '@salesforce/apex/CompaniesHouseController.clearCache';
-import companiesHouseBanner from '@salesforce/resourceUrl/companiesHouseBanner';
+
 
 export default class RecentCompaniesViewer extends LightningElement {
     @api bannerText = 'Discover the latest companies registered with Companies House';
@@ -37,10 +37,10 @@ export default class RecentCompaniesViewer extends LightningElement {
 
     // Pagination properties
     @track currentPage = 1;
-    @track itemsPerPage = 6;
+    @api itemsPerPage = 6;
 
     get bannerImageUrl() {
-        return companiesHouseBanner;
+        return '/resource/CH';
     }
 
     connectedCallback() {
@@ -300,10 +300,10 @@ export default class RecentCompaniesViewer extends LightningElement {
 
             // Use the most specific method based on which filters are active
             if (hasSIC && hasStatus) {
-                // SIC + Status
+                // SIC + Status - use the first selected status
                 filteredResults = await getCompaniesBySICAndStatus({
                     sicCode: this.selectedSICCode,
-                    companyStatuses: this.selectedCompanyStatuses,
+                    status: this.selectedCompanyStatuses[0],
                     apiKey: this.apiKey
                 });
             } else if (hasSIC && !hasStatus) {
