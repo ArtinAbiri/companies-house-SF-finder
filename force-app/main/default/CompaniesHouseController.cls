@@ -34,19 +34,70 @@ public with sharing class CompaniesHouseController {
         
         try {
             List<CompaniesHouse.Company> allCompanies = new List<CompaniesHouse.Company>();
+            Set<String> addedCompanyNumbers = new Set<String>(); // Track added companies to avoid duplicates
             
-            // Use simple text search queries as per API documentation
-            List<String> searchQueries = new List<String>{
-                'active',
-                'registered',
-                'incorporated 2025',
-                'incorporated 2024'
-            };
+            // Use a more intelligent approach to get diverse companies
+            // Instead of specific search terms, we'll use various strategies
             
-            for (String query : searchQueries) {
-                String endpoint = BASE_URL + SEARCH_ENDPOINT + '?q=' + EncodingUtil.urlEncode(query, 'UTF-8') + '&items_per_page=100&start_index=0';
-                
-                
+            // Strategy 1: Search by random company numbers (Companies House uses 8-digit numbers)
+            List<String> randomCompanyNumbers = new List<String>();
+            for (Integer i = 0; i < 20; i++) {
+                // Generate random 8-digit numbers
+                Integer randomNum = Math.mod((Integer)(Math.random() * 100000000), 99999999) + 10000000;
+                randomCompanyNumbers.add(String.valueOf(randomNum));
+            }
+            
+            // Strategy 2: Search by random letters (single characters)
+            List<String> randomLetters = new List<String>{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
+            
+            // Strategy 3: Search by incorporation dates
+            List<String> incorporationYears = new List<String>{'2025', '2024', '2023', '2022', '2021', '2020'};
+            
+            // Strategy 4: Search by company status
+            List<String> companyStatuses = new List<String>{'active', 'registered'};
+            
+            // Combine all strategies
+            List<String> searchStrategies = new List<String>();
+            
+            // Add random company numbers
+            for (String companyNum : randomCompanyNumbers) {
+                searchStrategies.add(companyNum);
+            }
+            
+            // Add random letters
+            for (Integer i = 0; i < 15; i++) {
+                Integer randomIndex = Math.mod((Integer)(Math.random() * 1000000), randomLetters.size());
+                searchStrategies.add(randomLetters[randomIndex]);
+            }
+            
+            // Add incorporation years
+            for (String year : incorporationYears) {
+                searchStrategies.add('incorporated ' + year);
+            }
+            
+            // Add company status searches
+            for (String status : companyStatuses) {
+                searchStrategies.add(status);
+            }
+            
+            // Shuffle all strategies for better variety
+            for (Integer i = searchStrategies.size() - 1; i > 0; i--) {
+                Integer j = Math.mod((Integer)(Math.random() * 1000000), i + 1);
+                String temp = searchStrategies[i];
+                searchStrategies[i] = searchStrategies[j];
+                searchStrategies[j] = temp;
+            }
+            
+            for (String query : searchStrategies) {
+                // Use different search strategies based on query type
+                String endpoint;
+                if (query.length() == 8 && query.isNumeric()) {
+                    // For company numbers, search directly
+                    endpoint = BASE_URL + '/company/' + query;
+                } else {
+                    // For other queries, use the search endpoint
+                    endpoint = BASE_URL + SEARCH_ENDPOINT + '?q=' + EncodingUtil.urlEncode(query, 'UTF-8') + '&items_per_page=100&start_index=0';
+                }
                 
                 HttpRequest request = new HttpRequest();
                 request.setEndpoint(endpoint);
@@ -58,30 +109,48 @@ public with sharing class CompaniesHouseController {
                 Http http = new Http();
                 HttpResponse response = http.send(request);
                 
-
-                
                 if (response.getStatusCode() == 200) {
                     String responseBody = response.getBody();
                     Map<String, Object> jsonResponse = (Map<String, Object>) JSON.deserializeUntyped(responseBody);
-                    List<Object> items = (List<Object>) jsonResponse.get('items');
                     
-                    if (items != null) {
-                        for (Object item : items) {
-                            Map<String, Object> companyMap = (Map<String, Object>) item;
-                            CompaniesHouse.Company company = mapToCompany(companyMap);
+                    // Handle different response types
+                    if (query.length() == 8 && query.isNumeric()) {
+                        // Direct company lookup - single company
+                        CompaniesHouse.Company company = mapToCompany(jsonResponse);
+                        
+                        if (String.isNotBlank(company.company_name) && 
+                            String.isNotBlank(company.company_number) &&
+                            (company.company_status == 'active' || company.company_status == 'registered') &&
+                            !addedCompanyNumbers.contains(company.company_number)) {
                             
-                            // Only include companies with valid names and active status
-                            if (String.isNotBlank(company.company_name) && 
-                                String.isNotBlank(company.company_number) &&
-                                (company.company_status == 'active' || company.company_status == 'registered')) {
+                            company.first_officer = getFirstOfficer(company.company_number, apiKey);
+                            allCompanies.add(company);
+                            addedCompanyNumbers.add(company.company_number);
+                        }
+                    } else {
+                        // Search results - multiple companies
+                        List<Object> items = (List<Object>) jsonResponse.get('items');
+                        
+                        if (items != null) {
+                            for (Object item : items) {
+                                Map<String, Object> companyMap = (Map<String, Object>) item;
+                                CompaniesHouse.Company company = mapToCompany(companyMap);
                                 
-                                // Get the first officer for this company
-                                company.first_officer = getFirstOfficer(company.company_number, apiKey);
-                                
-                                allCompanies.add(company);
-                                
-                                // Stop if we have enough companies
-                                if (allCompanies.size() >= MAX_RESULTS) break;
+                                // Only include companies with valid names, active status, and not already added
+                                if (String.isNotBlank(company.company_name) && 
+                                    String.isNotBlank(company.company_number) &&
+                                    (company.company_status == 'active' || company.company_status == 'registered') &&
+                                    !addedCompanyNumbers.contains(company.company_number)) {
+                                    
+                                    // Get the first officer for this company
+                                    company.first_officer = getFirstOfficer(company.company_number, apiKey);
+                                    
+                                    allCompanies.add(company);
+                                    addedCompanyNumbers.add(company.company_number);
+                                    
+                                    // Stop if we have enough companies
+                                    if (allCompanies.size() >= MAX_RESULTS) break;
+                                }
                             }
                         }
                     }
@@ -104,6 +173,21 @@ public with sharing class CompaniesHouseController {
     }
     
     /**
+     * @description Clears the cache to force fresh data retrieval
+     * @return Boolean Success status
+     */
+    @AuraEnabled
+    public static Boolean clearCache() {
+        try {
+            cache.clear();
+            cacheTimestamps.clear();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+    
+    /**
      * @description Fetches the first officer for a company
      * @param companyNumber Company number
      * @param apiKey Companies House API key
@@ -111,7 +195,7 @@ public with sharing class CompaniesHouseController {
      */
     private static CompaniesHouse.Person getFirstOfficer(String companyNumber, String apiKey) {
         try {
-            String endpoint = BASE_URL + OFFICERS_ENDPOINT + companyNumber + '/officers?items_per_page=1&start_index=0';
+            String endpoint = BASE_URL + '/company/' + companyNumber + '/officers?items_per_page=5&start_index=0';
             
             HttpRequest request = new HttpRequest();
             request.setEndpoint(endpoint);
@@ -129,13 +213,27 @@ public with sharing class CompaniesHouseController {
                 List<Object> items = (List<Object>) jsonResponse.get('items');
                 
                 if (items != null && !items.isEmpty()) {
+                    // Find the first active officer (preferably director)
+                    for (Object item : items) {
+                        Map<String, Object> officerMap = (Map<String, Object>) item;
+                        String officerRole = (String) officerMap.get('officer_role');
+                        
+                        // Prefer directors, but take any officer if no director found
+                        if (officerRole != null && (officerRole.toLowerCase().contains('director') || 
+                                                   officerRole.toLowerCase().contains('secretary') ||
+                                                   officerRole.toLowerCase().contains('member'))) {
+                            return mapToPerson(officerMap);
+                        }
+                    }
+                    
+                    // If no preferred role found, take the first officer
                     Map<String, Object> officerMap = (Map<String, Object>) items[0];
                     return mapToPerson(officerMap);
                 }
             }
             
         } catch (Exception e) {
-
+            // Log error but don't throw - officer info is optional
         }
         
         return null;
@@ -338,15 +436,7 @@ public with sharing class CompaniesHouseController {
         return filteredCompanies;
     }
     
-    /**
-     * @description Clears the cache
-     * @param apiKey Companies House API key (unused but required for consistency)
-     */
-    @AuraEnabled(cacheable=true)
-    public static void clearCache(String apiKey) {
-        cache.clear();
-        cacheTimestamps.clear();
-    }
+
     
     /**
      * @description Maps API response to Company object
@@ -361,7 +451,8 @@ public with sharing class CompaniesHouseController {
         company.company_number = (String) companyMap.get('company_number');
         company.company_status = (String) companyMap.get('company_status');
         company.date_of_incorporation = (String) companyMap.get('date_of_creation'); // API returns 'date_of_creation'
-        company.type = (String) companyMap.get('company_type'); // API returns 'company_type'
+        company.company_type = (String) companyMap.get('company_type'); // API returns 'company_type'
+        company.type = company.company_type; // Set both for compatibility
         
         // Map SIC codes
         Object sicCodesObj = companyMap.get('sic_codes');
@@ -400,6 +491,44 @@ public with sharing class CompaniesHouseController {
     private static CompaniesHouse.Person mapToPerson(Map<String, Object> personMap) {
         CompaniesHouse.Person person = new CompaniesHouse.Person();
         
+        // Map name field - Companies House API returns 'name' for officers
+        person.name = (String) personMap.get('name');
+        
+        // Map role - Companies House API returns 'officer_role'
+        person.role = (String) personMap.get('officer_role');
+        
+        // Map nationality - Companies House API returns 'nationality'
+        person.nationality = (String) personMap.get('nationality');
+        
+        // Map occupation - Companies House API returns 'occupation'
+        person.occupation = (String) personMap.get('occupation');
+        
+        // Map date of birth - Companies House API returns 'date_of_birth' as object
+        Object dobObj = personMap.get('date_of_birth');
+        if (dobObj != null && dobObj instanceof Map<String, Object>) {
+            Map<String, Object> dobMap = (Map<String, Object>) dobObj;
+            Integer year = (Integer) dobMap.get('year');
+            Integer month = (Integer) dobMap.get('month');
+            if (year != null && month != null) {
+                person.date_of_birth = year + '-' + String.valueOf(month).leftPad(2, '0') + '-01';
+            }
+        }
+        
+        // Map address - Companies House API returns 'address' as object
+        Object addressObj = personMap.get('address');
+        if (addressObj != null && addressObj instanceof Map<String, Object>) {
+            Map<String, Object> addressMap = (Map<String, Object>) addressObj;
+            person.address = new CompaniesHouse.Address();
+            person.address.address_line_1 = (String) addressMap.get('address_line_1');
+            person.address.address_line_2 = (String) addressMap.get('address_line_2');
+            person.address.locality = (String) addressMap.get('locality');
+            person.address.region = (String) addressMap.get('region');
+            person.address.postal_code = (String) addressMap.get('postal_code');
+            person.address.country = (String) addressMap.get('country');
+            person.address.premises = (String) addressMap.get('premises');
+        }
+        
+        // Additional fields (may not be present in Companies House API)
         person.forename = (String) personMap.get('forename');
         person.surname = (String) personMap.get('surname');
         person.title = (String) personMap.get('title');
@@ -425,11 +554,29 @@ public with sharing class CompaniesHouseController {
             
             // Use first officer as the lead name
             if (company.first_officer != null && company.first_officer.name != null) {
-                newLead.LastName = company.first_officer.name;
-                newLead.FirstName = ''; // Clear first name to use full name in last name
+                String fullName = company.first_officer.name;
+                
+                // Try to split name into first and last name
+                List<String> nameParts = fullName.split(' ');
+                if (nameParts.size() >= 2) {
+                    newLead.FirstName = nameParts[0];
+                    List<String> lastNameParts = new List<String>();
+                    for (Integer i = 1; i < nameParts.size(); i++) {
+                        lastNameParts.add(nameParts[i]);
+                    }
+                    newLead.LastName = String.join(lastNameParts, ' ');
+                } else {
+                    newLead.LastName = fullName;
+                }
+                
+                // Add officer title if available
+                if (company.first_officer.role != null) {
+                    newLead.Title = company.first_officer.role;
+                }
             } else {
                 // Fallback to company name if no officer
                 newLead.LastName = company.company_name;
+                newLead.Title = 'Company Representative';
             }
             
             newLead.Status = 'Open - Not Contacted';
@@ -527,8 +674,22 @@ public with sharing class CompaniesHouseController {
             if (company.first_officer != null && company.first_officer.name != null) {
                 Contact newContact = new Contact();
                 newContact.AccountId = newAccount.Id;
-                newContact.LastName = company.first_officer.name;
-                newContact.FirstName = ''; // Clear first name to use full name in last name
+                
+                String fullName = company.first_officer.name;
+                
+                // Try to split name into first and last name
+                List<String> nameParts = fullName.split(' ');
+                if (nameParts.size() >= 2) {
+                    newContact.FirstName = nameParts[0];
+                    List<String> lastNameParts = new List<String>();
+                    for (Integer i = 1; i < nameParts.size(); i++) {
+                        lastNameParts.add(nameParts[i]);
+                    }
+                    newContact.LastName = String.join(lastNameParts, ' ');
+                } else {
+                    newContact.LastName = fullName;
+                }
+                
                 newContact.Title = company.first_officer.role;
                 
                 // Map officer address if available
